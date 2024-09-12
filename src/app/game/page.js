@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useTelegram } from '../TelegramProvider';
+import { useSpring, animated, config } from 'react-spring';
 
 const GAME_DURATION = 30; // 30 seconds per word
-const WORD_LENGTH = 5; // We'll fetch 5-letter words, you can adjust this
-const COOLDOWN_PERIOD = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+const COOLDOWN_PERIOD = 0.001 * 60 * 60 * 1000; // 3 hours in milliseconds
 
 export default function ScrabbleGame() {
   const { user } = useTelegram();
@@ -17,6 +17,35 @@ export default function ScrabbleGame() {
   const [isLoading, setIsLoading] = useState(true);
   const [canPlay, setCanPlay] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [isCorrect, setIsCorrect] = useState(false);
+
+  // Animations
+  const fadeIn = useSpring({
+    opacity: isLoading ? 0 : 1,
+    config: config.molasses,
+  });
+
+  const scoreAnimation = useSpring({
+    number: score,
+    from: { number: 0 },
+  });
+
+  const scrambleAnimation = useSpring({
+    opacity: 1,
+    from: { opacity: 0 },
+    reset: true,
+    key: scrambledWord,
+  });
+
+  const timerAnimation = useSpring({
+    width: `${(timeLeft / GAME_DURATION) * 100}%`,
+    config: config.molasses,
+  });
+
+  const correctAnimation = useSpring({
+    transform: isCorrect ? 'scale(1.1)' : 'scale(1)',
+    config: config.wobbly,
+  });
 
   const scrambleWord = useCallback((word) => {
     return word.split('').sort(() => Math.random() - 0.5).join('');
@@ -25,7 +54,7 @@ export default function ScrabbleGame() {
   const fetchNewWord = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/randomword?length=${WORD_LENGTH}`);
+      const response = await fetch(`/api/randomword`);
       if (!response.ok) {
         throw new Error('Failed to fetch word');
       }
@@ -36,7 +65,6 @@ export default function ScrabbleGame() {
       setUserInput('');
     } catch (error) {
       console.error('Error fetching new word:', error);
-      // Fallback to a default word if API fails
       const fallbackWord = 'REACT';
       setCurrentWord(fallbackWord);
       setScrambledWord(scrambleWord(fallbackWord));
@@ -85,7 +113,7 @@ export default function ScrabbleGame() {
   useEffect(() => {
     if (cooldownTime > 0) {
       const timer = setTimeout(() => {
-        setCooldownTime(prevTime => {
+        setCooldownTime((prevTime) => {
           if (prevTime <= 1000) {
             checkCooldown();
             return 0;
@@ -103,28 +131,37 @@ export default function ScrabbleGame() {
 
   const checkAnswer = () => {
     if (userInput === currentWord) {
-      const pointsEarned = Math.ceil(timeLeft / 3); // More points for faster answers
+      const pointsEarned = Math.ceil(timeLeft / 3);
       setScore(score + pointsEarned);
+      setIsCorrect(true);
+      setTimeout(() => setIsCorrect(false), 500);
       fetchNewWord();
+    } else {
+      // Wrong answer shake animation
+      const input = document.getElementById('word-input');
+      input.classList.add('shake');
+      setTimeout(() => input.classList.remove('shake'), 500);
     }
   };
 
   const sendScoreToAPI = async () => {
-    try {
-      const res = await fetch('/api/addGamePoints', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telegramId: user.id, points: score })
-      });
-      const updatedUser = await res.json();
-      console.log('Score sent to API:', updatedUser);
-
-      // Update cooldown in local storage
-      localStorage.setItem(`lastPlayTime_${user.id}`, Date.now().toString());
-      checkCooldown();
-    } catch (error) {
-      console.error('Error sending score to API:', error);
+    if (score > 0) {
+      try {
+        const res = await fetch('/api/addGamePoints', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramId: user.id, points: score }),
+        });
+        const updatedUser = await res.json();
+        console.log('Score sent to API:', updatedUser);
+      } catch (error) {
+        console.error('Error sending score to API:', error);
+      }
     }
+
+    // Always update the last play time, regardless of score
+    localStorage.setItem(`lastPlayTime_${user.id}`, Date.now().toString());
+    checkCooldown();
   };
 
   const formatTime = (ms) => {
@@ -135,55 +172,72 @@ export default function ScrabbleGame() {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Unscramble the Word!</h2>
-      {!canPlay ? (
-        <div>
-          <p>You need to wait before playing again.</p>
-          <p>Time remaining: {formatTime(cooldownTime)}</p>
-        </div>
-      ) : !gameOver ? (
-        <>
-          <p className="mb-2">Score: {score}</p>
-          <p className="mb-2">Time left: {timeLeft} seconds</p>
-          {isLoading ? (
-            <p>Loading new word...</p>
-          ) : (
-            <>
-              <p className="text-xl font-bold mb-4">{scrambledWord}</p>
-              <input
-                type="text"
-                value={userInput}
-                onChange={handleInputChange}
-                className="w-full p-2 mb-4 border rounded"
-                placeholder="Enter your guess"
-              />
-              <button
-                onClick={checkAnswer}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Submit
-              </button>
-            </>
-          )}
-        </>
-      ) : (
-        <div>
-          <p className="mb-4">Game Over! Your final score: {score}</p>
-          <p>You can play again in: {formatTime(cooldownTime)}</p>
-          <button
-            onClick={() => {
-              setScore(0);
-              setGameOver(false);
-              checkCooldown();
-            }}
-            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mt-4"
-            disabled={!canPlay}
-          >
-            Play Again
-          </button>
-        </div>
-      )}
+    <div className="flex items-center justify-center min-h-screen bg-white text-black relative overflow-hidden">
+      {/* Background Circles for effect */}
+      <div className="absolute w-64 h-64 bg-black opacity-10 rounded-full top-10 left-10 animate-pulse"></div>
+      <div className="absolute w-48 h-48 bg-black opacity-10 rounded-full bottom-10 right-10 animate-pulse"></div>
+
+      {/* Main Content */}
+      <div className="w-full max-w-md p-4 text-center bg-white shadow-xl rounded-lg z-10 relative">
+        <h2 className="text-3xl font-bold mb-6">🧩 Unscramble the Word!</h2>
+        {!canPlay ? (
+          <div className="text-lg text-red-500">
+            <p>⏳ You need to wait before playing again.</p>
+            <p>Time remaining: {formatTime(cooldownTime)}</p>
+          </div>
+        ) : !gameOver ? (
+          <animated.div style={fadeIn}>
+            <p className="mb-4 text-xl">
+              Score: <animated.span>{scoreAnimation.number.to((n) => Math.floor(n))}</animated.span>
+            </p>
+
+            {/* Timer Bar */}
+            <div className="w-full bg-gray-300 rounded-full h-4 mb-6">
+              <animated.div className="bg-black h-4 rounded-full" style={timerAnimation}></animated.div>
+            </div>
+
+            {isLoading ? (
+              <div className="loader">Loading...</div>
+            ) : (
+              <>
+                <animated.p className="text-4xl font-bold mb-6" style={{ ...scrambleAnimation, ...correctAnimation }}>
+                  {scrambledWord}
+                </animated.p>
+                <input
+                  id="word-input"
+                  type="text"
+                  value={userInput}
+                  onChange={handleInputChange}
+                  className="w-full p-3 mb-4 border border-black rounded-lg text-center text-xl"
+                  placeholder="Enter your guess"
+                />
+                <button
+                  onClick={checkAnswer}
+                  className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-all"
+                >
+                  Submit
+                </button>
+              </>
+            )}
+          </animated.div>
+        ) : (
+          <div className="text-lg">
+            <p className="mb-4">Game Over! Your final score: {score}</p>
+            <p>You can play again in: {formatTime(cooldownTime)}</p>
+            <button
+              onClick={() => {
+                setScore(0);
+                setGameOver(false);
+                checkCooldown();
+              }}
+              className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-all mt-6"
+              disabled={!canPlay}
+            >
+              Play Again
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

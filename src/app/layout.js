@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata = {
-  title: 'Telegram Mini App',
-  description: 'A task and game app for Telegram',
+  title: 'Brainy',
+  description: 'A game that tests your intelligence',
 }
 
 export default function RootLayout({ children }) {

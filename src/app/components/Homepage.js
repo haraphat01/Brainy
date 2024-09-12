@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useTelegram } from './TelegramProvider';
+import { useTelegram } from '../TelegramProvider';
 
 export default function Home() {
   const telegram = useTelegram();
