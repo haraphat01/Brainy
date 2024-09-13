@@ -23,7 +23,7 @@ export default function Navbar() {
           <span className="text-sm">Referral</span>
         </Link>
         <Link href="/referral" className="flex flex-col rounded-full items-center justify-center w-full h-full text-black hover:bg-gray-100">
-          <span className="text-sm">Leader Board</span>
+          <span className="text-sm">AI</span>
         </Link>
       </div>
     </nav>

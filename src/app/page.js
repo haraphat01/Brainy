@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useTelegram } from './TelegramProvider';
+import Link from 'next/link';  // Import Link component
 
 export default function Home() {
   const telegram = useTelegram();
   const user = telegram?.user;
+
   const [userPoints, setUserPoints] = useState(null);
   
   const getUserName = () => {
@@ -18,6 +20,7 @@ export default function Home() {
         try {
           const res = await fetch(`/api/userspoint?telegramId=${user.id}`);  // Updated to GET request with query parameter
           const data = await res.json();
+          console.log("user testing",data)
           setUserPoints(data.points);
         } catch (error) {
           console.error('Error fetching user points:', error);
@@ -49,15 +52,22 @@ export default function Home() {
             <div className="mt-6 space-y-4">
               {/* Animating cards */}
               <div className="flex flex-col items-center gap-4">
-                <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
-                  🎯 Daily Challenges
-                </button>
-                <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
-                  🎮 Play Games
-                </button>
-                <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
-                  🏆 Leaderboards
-                </button>
+                <Link href="/tasks">  
+                  <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
+                    🎯 Daily Task
+                  </button>
+                </Link>
+                
+                <Link href="/games">  
+                  <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
+                    🎮 Play Games
+                  </button>
+                </Link>
+                <Link href="/leaderboard">  
+                  <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
+                    🏆 Leaderboards
+                  </button>
+                </Link>
               </div>
             </div>
 

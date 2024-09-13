@@ -1,15 +1,15 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import Script from 'next/script';
 
 // Create the Telegram context
 const TelegramContext = createContext({});
 
 // Hook to use Telegram context
 export const useTelegram = () => useContext(TelegramContext);
+
 // TelegramProvider component to wrap around your app
-export  default function TelegramProvider ({ children }) {
+export default function TelegramProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isReady, setIsReady] = useState(false);
   const [webApp, setWebApp] = useState(null);
@@ -22,13 +22,16 @@ export  default function TelegramProvider ({ children }) {
         const initDataUnsafe = WebApp.initDataUnsafe || {};
 
         if (initDataUnsafe.user) {
+          const { id, first_name, last_name, username } = initDataUnsafe.user;
+
           try {
-            // Fetch user data
+            // Send user data to your API
             const response = await fetch('/api/user', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ telegramId: initDataUnsafe.user.id })
+              body: JSON.stringify({ telegramId: id, firstName: first_name, lastName: last_name, username })
             });
+
             const userData = await response.json();
             setUser(userData);
           } catch (error) {

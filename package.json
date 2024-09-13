@@ -10,11 +10,14 @@
   },
   "dependencies": {
     "@twa-dev/sdk": "^7.10.1",
+    "lucide-react": "^0.441.0",
     "mongoose": "^8.6.1",
     "next": "14.2.9",
+    "qrcode.react": "^4.0.1",
     "react": "^18",
     "react-dom": "^18",
-    "react-spring": "^9.7.4"
+    "react-spring": "^9.7.4",
+    "swr": "^2.2.5"
   },
   "devDependencies": {
     "eslint": "^8",
