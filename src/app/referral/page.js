@@ -4,61 +4,76 @@ import { useTelegram } from '../TelegramProvider';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function Referral() {
-  const { user, webApp } = useTelegram();  // Destructure user and webApp from context
+  const { user, webApp } = useTelegram();
   const [referralLink, setReferralLink] = useState('');
   const [referralPoints, setReferralPoints] = useState(0);
-  const [level2Points, setLevel2Points] = useState(0);
+  const [referralCount, setReferralCount] = useState(0);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
       const link = `https://t.me/fomoflip_bot/arafat?start=${user.id}`;
       setReferralLink(link);
       fetchReferralData();
+    } else {
+      setError('User information not available');
+      setIsLoading(false);
     }
   }, [user?.id]);
 
   const fetchReferralData = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/referral?userId=${user?.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch referral data');
+      }
       const data = await response.json();
-      setReferralPoints(data.referralPoints);
-      setLevel2Points(data.level2Points);
+      setReferralPoints(data.referralPoints || 0);
+      setReferralCount(data.referralCount || 0);
+      setError('');
     } catch (error) {
       console.error('Error fetching referral data:', error);
+      setError('Failed to load referral data. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
-    alert('Referral link copied to clipboard!');
+    webApp?.showPopup({ message: 'Referral link copied to clipboard!' });
   };
 
   const shareLink = () => {
-    if (webApp && typeof webApp.shareUrl === 'function') {
-      webApp.shareUrl(referralLink, 'Check out FOMOFlips!');
+    if (webApp?.shareUrl) {
+      webApp.shareUrl(referralLink);
     } else {
-      alert('Sharing is not available in this environment.');
+      webApp?.showPopup({ message: 'Sharing is not available in this environment.' });
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center mt-8">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center mt-8 text-red-500">{error}</div>;
+  }
 
   return (
     <div className="max-w-lg mx-auto bg-white shadow-lg rounded-lg overflow-hidden mt-8 p-6 border border-gray-300">
       <div className="space-y-6">
         <h2 className="text-2xl font-bold text-center text-black">Refer a Friend</h2>
-
-        {/* QR Code */}
         <div className="flex justify-center">
           <QRCodeSVG value={referralLink} size={180} bgColor="#fff" fgColor="#000" />
         </div>
-
-        {/* Referral Link */}
         <input
           value={referralLink}
           readOnly
           className="w-full text-center p-3 border border-black rounded-lg bg-white text-black focus:outline-none focus:ring-2 focus:ring-gray-800 transition"
         />
-
-        {/* Buttons */}
         <div className="flex justify-center space-x-4">
           <button
             onClick={copyToClipboard}
@@ -73,11 +88,9 @@ export default function Referral() {
             Share Link
           </button>
         </div>
-
-        {/* Referral Points */}
         <div className="text-center space-y-2">
           <p className="text-lg font-semibold text-black">Your Referral Points: {referralPoints}</p>
-          <p className="text-lg font-semibold text-black">Level 2 Referral Points: {level2Points}</p>
+          <p className="text-lg font-semibold text-black">Total Referrals: {referralCount}</p>
         </div>
       </div>
     </div>

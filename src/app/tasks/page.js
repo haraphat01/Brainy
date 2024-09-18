@@ -3,72 +3,84 @@ import { useState, useEffect } from 'react';
 import { useTelegram } from '../TelegramProvider';
 
 export default function Tasks() {
-  const { user, setUser } = useTelegram(); // Get user and setUser from context
-  const [tasks, setTasks] = useState([]); // Initialize tasks as an empty array
-  const [loading, setLoading] = useState(true); // Track loading state
+  const { user, setUser } = useTelegram();
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch tasks from the API
     const fetchTasks = async () => {
+      if (!user || !user.id) {
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await fetch('/api/tasks');
+        const res = await fetch('/api/tasks', {
+          headers: {
+            'telegram_id': user.id
+          }
+        });
+        if (!res.ok) {
+          throw new Error('Failed to fetch tasks');
+        }
         const data = await res.json();
-        setTasks(data); // Set tasks data from the API response
+        console.log('Fetched tasks:', data);
+        setTasks(data);
       } catch (error) {
         console.error("Failed to fetch tasks:", error);
-        setTasks([]); // Set tasks to an empty array in case of error
+        setTasks([]);
       } finally {
-        setLoading(false); // Stop loading when tasks are fetched
+        setLoading(false);
       }
     };
     fetchTasks();
-  }, []);
+  }, [user]);
 
   const completeTask = async (taskId) => {
     if (!user) return;
 
-    // Send task completion to the server
-    const res = await fetch('/api/completeTask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegramId: user?.telegramId, taskId }),
-    });
+    try {
+      const res = await fetch('/api/completeTask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegramId: user.id, taskId }),
+      });
 
-    const updatedUser = await res.json();
-    setUser(updatedUser); // Update user with the new completed tasks
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUser(updatedUser);
+        // Remove the completed task from the list
+        setTasks(tasks.filter(task => task._id !== taskId));
+      } else {
+        console.error('Failed to complete task');
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center py-10">
       <h2 className="text-3xl font-bold text-gray-800 mb-8">Available Tasks</h2>
 
-      {/* Task list container */}
       <div className="w-full max-w-lg bg-gray-100 rounded-xl shadow-lg p-6">
         {loading ? (
           <p className="text-center text-gray-600">Loading tasks...</p>
         ) : tasks.length > 0 ? (
           tasks.map((task) => (
             <div
-              key={task.id}
+              key={task._id}
               className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md mb-4 transform transition-all hover:scale-105"
             >
-              {/* Task information */}
               <div>
                 <span className="text-lg font-medium text-gray-800">{task.name}</span>
                 <span className="text-sm text-gray-500 block">{task.credits} credits</span>
               </div>
 
-              {/* Claim button */}
               <button
-                onClick={() => completeTask(task.id)}
-                disabled={!user || (user.completedTasks && user.completedTasks.includes(task.id))} // Disable if task already claimed
-                className={`ml-2 px-4 py-2 font-semibold rounded ${
-                  user?.completedTasks?.includes(task.id)
-                    ? 'bg-green-500 text-white'
-                    : 'bg-blue-500 text-white'
-                } disabled:bg-gray-300`}
+                onClick={() => completeTask(task._id)}
+                className="ml-2 px-4 py-2 font-semibold rounded bg-blue-500 text-white hover:bg-blue-600"
               >
-                {user?.completedTasks?.includes(task.id) ? 'Claimed' : 'Claim'}
+                Claim
               </button>
             </div>
           ))

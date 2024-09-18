@@ -2,6 +2,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import TelegramProvider from "./TelegramProvider";
 import Navbar from "./components/navbar";
+import { GoogleAnalytics } from '@next/third-parties/google'
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
        <TelegramProvider>
       
           {children}
+          <GoogleAnalytics gaId="G-06GKRDP0K4" />
           <Navbar/>
         </TelegramProvider>
      

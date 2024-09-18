@@ -9,13 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@next/third-parties": "^14.2.11",
     "@twa-dev/sdk": "^7.10.1",
+    "groq-sdk": "^0.3.2",
     "lucide-react": "^0.441.0",
     "mongoose": "^8.6.1",
+    "moralis": "^2.27.2",
     "next": "14.2.9",
     "qrcode.react": "^4.0.1",
     "react": "^18",
     "react-dom": "^18",
+    "react-markdown": "^9.0.1",
     "react-spring": "^9.7.4",
     "swr": "^2.2.5"
   },

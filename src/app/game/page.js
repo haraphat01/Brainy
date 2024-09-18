@@ -18,6 +18,7 @@ export default function ScrabbleGame() {
   const [canPlay, setCanPlay] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [hint, setHint] = useState('');
 
   // Animations
   const fadeIn = useSpring({
@@ -61,13 +62,15 @@ export default function ScrabbleGame() {
       const data = await response.json();
       setCurrentWord(data.word);
       setScrambledWord(scrambleWord(data.word));
+      setHint(data.hint); // Set the hint from the API response
       setTimeLeft(GAME_DURATION);
       setUserInput('');
     } catch (error) {
       console.error('Error fetching new word:', error);
-      const fallbackWord = 'REACT';
+      const fallbackWord = 'BITCOIN';
       setCurrentWord(fallbackWord);
       setScrambledWord(scrambleWord(fallbackWord));
+      setHint('A popular cryptocurrency');
     } finally {
       setIsLoading(false);
     }
@@ -145,6 +148,7 @@ export default function ScrabbleGame() {
   };
 
   const sendScoreToAPI = async () => {
+ 
     if (score > 0) {
       try {
         const res = await fetch('/api/addGamePoints', {
@@ -179,7 +183,8 @@ export default function ScrabbleGame() {
 
       {/* Main Content */}
       <div className="w-full max-w-md p-4 text-center bg-white shadow-xl rounded-lg z-10 relative">
-        <h2 className="text-3xl font-bold mb-6">🧩 Unscramble the Word!</h2>
+        <h2 className="text-3xl font-bold mb-6">🧩 Unscramble the Word! 🧩</h2>
+        <p className="text-xl font-semibold mb-4">Guess the country or crypto term</p>
         {!canPlay ? (
           <div className="text-lg text-red-500">
             <p>⏳ You need to wait before playing again.</p>
@@ -200,9 +205,10 @@ export default function ScrabbleGame() {
               <div className="loader">Loading...</div>
             ) : (
               <>
-                <animated.p className="text-4xl font-bold mb-6" style={{ ...scrambleAnimation, ...correctAnimation }}>
+                <animated.p className="text-4xl font-bold mb-4" style={{ ...scrambleAnimation, ...correctAnimation }}>
                   {scrambledWord}
                 </animated.p>
+                <p className="text-lg mb-4">Hint: {hint}</p>
                 <input
                   id="word-input"
                   type="text"

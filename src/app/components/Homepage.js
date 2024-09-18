@@ -66,6 +66,11 @@ export default function Homepage() {
                     🏆 Leaderboards
                   </button>
                 </Link>
+                <Link href="/referral">  
+                  <button className="transition-transform transform hover:scale-105 bg-black text-white px-6 py-2 rounded-full shadow-md hover:shadow-lg">
+                  🚀 Referrals
+                  </button>
+                </Link>
               </div>
             </div>
 
