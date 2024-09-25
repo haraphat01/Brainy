@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
 
 const UserSchema = new mongoose.Schema({
-  telegramId: { type: String, unique: true },
+  telegramId: { type: String, unique: true, required: true },
   points: { type: Number, default: 0 },
+  referralPoints: { type: Number, default: 0 }, // Points from referrals
   completedTasks: [String],
-  referralPoints: Number,
-  level2Points: Number,
-  referredBy: String,
-  firstName: { type: String },  // New field for first name
-  lastName: { type: String },   // New field for last name
-  username: { type: String }    // New field for username
-});
+  referrals: [{ type: String }],  // Store telegramIds of referred users
+  referredBy: { type: String, default: null }, // The telegramId of the referrer
+  firstName: { type: String },
+  lastName: { type: String },
+  username: { type: String }
+}, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

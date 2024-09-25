@@ -2,10 +2,13 @@
 import { useState, useEffect } from 'react';
 import { useTelegram } from '../TelegramProvider';
 
+
 export default function Tasks() {
   const { user, setUser } = useTelegram();
+  
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+ 
 
   useEffect(() => {
     const fetchTasks = async () => {

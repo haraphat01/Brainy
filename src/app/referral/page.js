@@ -1,45 +1,19 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useTelegram } from '../TelegramProvider';
-import { QRCodeSVG } from 'qrcode.react';
 
-export default function Referral() {
-  const { user, webApp } = useTelegram();
+import { useEffect, useState } from 'react';
+import { useTelegram } from '../TelegramProvider'; // Import useTelegram hook
+import { QRCodeSVG } from 'qrcode.react';
+export default function ReferralPage() {
+  const { user, webApp } = useTelegram();// Get user from context
   const [referralLink, setReferralLink] = useState('');
-  const [referralPoints, setReferralPoints] = useState(0);
-  const [referralCount, setReferralCount] = useState(0);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
+      // Generate the referral link using the user's Telegram ID
       const link = `https://t.me/fomoflip_bot/arafat?start=${user.id}`;
       setReferralLink(link);
-      fetchReferralData();
-    } else {
-      setError('User information not available');
-      setIsLoading(false);
     }
   }, [user?.id]);
-
-  const fetchReferralData = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/referral?userId=${user?.id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch referral data');
-      }
-      const data = await response.json();
-      setReferralPoints(data.referralPoints || 0);
-      setReferralCount(data.referralCount || 0);
-      setError('');
-    } catch (error) {
-      console.error('Error fetching referral data:', error);
-      setError('Failed to load referral data. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
@@ -53,13 +27,8 @@ export default function Referral() {
       webApp?.showPopup({ message: 'Sharing is not available in this environment.' });
     }
   };
-
-  if (isLoading) {
-    return <div className="text-center mt-8">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center mt-8 text-red-500">{error}</div>;
+  if (!user) {
+    return <div>Loading user data...</div>;
   }
 
   return (
@@ -88,10 +57,7 @@ export default function Referral() {
             Share Link
           </button>
         </div>
-        <div className="text-center space-y-2">
-          <p className="text-lg font-semibold text-black">Your Referral Points: {referralPoints}</p>
-          <p className="text-lg font-semibold text-black">Total Referrals: {referralCount}</p>
-        </div>
+       
       </div>
     </div>
   );

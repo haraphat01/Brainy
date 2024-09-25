@@ -2,73 +2,72 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../model/User';
-
-export async function GET(request) {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-  
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-  
-    try {
-      await dbConnect();
-      const user = await User.findOne({ telegramId: userId });
-  
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-  
-      return NextResponse.json({
-        referralPoints: user.points || 0,
-        referralCount: user.referrals ? user.referrals.length : 0,
-      });
-    } catch (error) {
-      console.error('Error fetching referral data:', error);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-  }
-  
-export async function POST(request) {
-  const { referrerId, referredId } = await request.json();
-
-  if (!referrerId || !referredId) {
-    return NextResponse.json({ error: 'Both referrer and referred IDs are required' }, { status: 400 });
-  }
+import Referral from '../../../model/Referral';
+export async function POST(req) {
+  await dbConnect();
 
   try {
-    await dbConnect();
+    const { referredId, referrerId } = await req.json();
+
+    // Validate incoming data
+    if (!referredId || !referrerId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing referredId or referrerId' }),
+        { status: 400 }
+      );
+    }
+
+    // Check if the referral already exists in the Referral model
+    const existingReferral = await Referral.findOne({ referredId });
+    if (existingReferral) {
+      return new Response(
+        JSON.stringify({ error: 'This user has already been referred.' }),
+        { status: 400 }
+      );
+    }
+
+    // Create new referral entry
+    await Referral.create({
+      referrerId,
+      referredId,
+      pointsAwarded: false,
+    });
+
+    // Check if the referred user exists
+    const referredUser = await User.findOne({ telegramId: referredId });
+    if (!referredUser) {
+      // Create new user if not exists
+      await User.create({
+        telegramId: referredId,
+        points: 20, // New user gets 20 points for joining
+        referredBy: referrerId,
+      });
+    }
+
+    // Find the referrer and update their points
     const referrer = await User.findOne({ telegramId: referrerId });
-    const referred = await User.findOne({ telegramId: referredId });
-
-    if (!referrer || !referred) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!referrer) {
+      return new Response(
+        JSON.stringify({ error: 'Referrer not found.' }),
+        { status: 400 }
+      );
     }
 
-    if (referrer.referrals.includes(referredId)) {
-      return NextResponse.json({ error: 'User has already been referred' }, { status: 400 });
-    }
-
-    // Credit points to the referrer (12 points)
-    referrer.points += 12;
-    referrer.referrals.push(referredId);
+    // Add 10 points to referrer for referring
+    referrer.points += 10;
     await referrer.save();
 
-    // Check for level 2 referral
-    const level2Referrer = await User.findOne({ referrals: referrerId });
-    if (level2Referrer) {
-      // Credit points to the level 2 referrer (5 points)
-      level2Referrer.points += 5;
-      await level2Referrer.save();
-    }
+    // Mark the referral as awarded
+    await Referral.updateOne({ referredId }, { pointsAwarded: true });
 
-    return NextResponse.json({ 
-      message: 'Referral successful',
-      referrerPoints: referrer.points,
-      level2ReferrerPoints: level2Referrer ? level2Referrer.points : null
-    });
+    return new Response(
+      JSON.stringify({ message: 'Referral successful. Referrer has been awarded points.' }),
+      { status: 200 }
+    );
   } catch (error) {
-    console.error('Error processing referral:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return new Response(
+      JSON.stringify({ error: `Failed to process referral: ${error.message}` }),
+      { status: 500 }
+    );
   }
 }

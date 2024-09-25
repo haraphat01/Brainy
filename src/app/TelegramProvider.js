@@ -11,63 +11,110 @@ export const useTelegram = () => useContext(TelegramContext);
 // TelegramProvider component to wrap around your app
 export default function TelegramProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isReady, setIsReady] = useState(false);
   const [webApp, setWebApp] = useState(null);
+  const [startParam, setStartParam] = useState(null); // State to capture referral start parameter
 
   useEffect(() => {
     const initTelegram = async () => {
       if (typeof window !== 'undefined') {
-        const WebApp = (await import('@twa-dev/sdk')).default;
-        WebApp.ready();
-        const initDataUnsafe = WebApp.initDataUnsafe || {};
+        try {
+          // Load Telegram WebApp SDK
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://telegram.org/js/telegram-web-app.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
 
-        if (initDataUnsafe.user) {
-          const { id, first_name, last_name, username } = initDataUnsafe.user;
+          const WebApp = window.Telegram.WebApp;
+          WebApp.ready();
 
-          try {
-            // Send user data to your API
-            const response = await fetch('/api/user', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ telegramId: id, firstName: first_name, lastName: last_name, username })
+          const initDataUnsafe = WebApp.initDataUnsafe || {};
+          if (initDataUnsafe.user) {
+            const { id, first_name, last_name, username } = initDataUnsafe.user;
+
+            // Set user data
+            setUser({
+              id,
+              firstName: first_name,
+              lastName: last_name,
+              username,
             });
 
-            const userData = await response.json();
-            setUser(userData);
-          } catch (error) {
-            console.error('Failed to fetch user data:', error);
+            // Optionally, send user data to your API
+            await fetch('/api/user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                telegramId: id,
+                firstName: first_name,
+                lastName: last_name,
+                username,
+              }),
+            });
           }
-        }
 
-        setWebApp(WebApp); // Set the WebApp instance
-        setIsReady(true);  // Set the app as ready
+          setWebApp(WebApp); // Set the WebApp instance
+
+          // Capture the start parameter (referral ID)
+          const startParameter = initDataUnsafe.start_param || '';
+          if (startParameter) {
+            setStartParam(startParameter); // Store start param if exists
+          }
+        } catch (error) {
+          console.error('Error initializing Telegram WebApp:', error);
+        }
       }
     };
 
     initTelegram();
   }, []);
 
-  // Memoize the context value for performance
-  const value = useMemo(() => {
-    return webApp
-      ? {
-          webApp,
-          unsafeData: webApp.initDataUnsafe,
-          user: webApp.initDataUnsafe.user,
-        }
-      : { user };  // Return `user` when `webApp` is not available
-  }, [webApp, user]);
+  useEffect(() => {
+    if (user?.id && startParam) {
+      handleReferral(user.id, startParam); // Process referral if both user and start param are available
+    }
+  }, [user, startParam]);
 
-  if (!isReady) {
-    return <div>Loading...</div>;
+  // Function to handle referral processing
+  const handleReferral = async (referredId, referrerId) => {
+    try {
+      const response = await fetch('/api/referral', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ referredId, referrerId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process referral');
+      }
+
+      // Optionally, show a success popup in the Telegram WebApp
+      webApp?.showPopup({ message: 'Welcome! You\'ve been successfully referred.' });
+    } catch (error) {
+      console.error('Error processing referral:', error);
+      // Show an error popup in case of failure
+      webApp?.showPopup({ message: 'There was an error processing your referral.' });
+    }
+  };
+
+  // Memoize the context value for performance
+  const value = useMemo(() => ({
+    webApp,
+    user,
+    startParam,
+  }), [webApp, user, startParam]);
+
+  if (!webApp) {
+    return <div>Loading...</div>; // Consider adding a better loading component
   }
 
   return (
     <TelegramContext.Provider value={value}>
-      {/* Ensure Telegram WebApp SDK script is loaded */}
-      <script src="https://telegram.org/js/telegram-web-app.js"></script>
       {children}
     </TelegramContext.Provider>
   );
 }
-

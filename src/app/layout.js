@@ -1,6 +1,6 @@
 import localFont from "next/font/local";
 import "./globals.css";
-import TelegramProvider from "./TelegramProvider";
+import  TelegramProvider   from "./TelegramProvider";
 import Navbar from "./components/navbar";
 import { GoogleAnalytics } from '@next/third-parties/google'
 const geistSans = localFont({
