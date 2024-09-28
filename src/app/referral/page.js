@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 export default function ReferralPage() {
   const { user, webApp } = useTelegram();// Get user from context
   const [referralLink, setReferralLink] = useState('');
+  const [referredUsers, setReferredUsers] = useState([]); // New state for referred users
 
   useEffect(() => {
     if (user?.id) {
@@ -13,6 +14,19 @@ export default function ReferralPage() {
       const link = `https://t.me/fomoflip_bot/arafat?start=${user.id}`;
       setReferralLink(link);
     }
+  }, [user?.id]);
+
+  useEffect(() => {
+    const fetchReferredUsers = async () => {
+      if (user?.id) {
+        const response = await fetch(`/api/referral/referred?referrerId=${user.id}`);
+        const data = await response.json();
+        if (data.users) {
+          setReferredUsers(data.users.slice(0, 10)); // Get the first 10 referred users
+        }
+      }
+    };
+    fetchReferredUsers();
   }, [user?.id]);
 
   const copyToClipboard = () => {
@@ -57,7 +71,14 @@ export default function ReferralPage() {
             Share Link
           </button>
         </div>
-       
+        <div className="mt-6">
+          <h3 className="text-xl font-bold">Referred Users:</h3>
+          <ul>
+            {referredUsers.map((user) => (
+              <li key={user.telegramId} className="text-black">{user.telegramId}</li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

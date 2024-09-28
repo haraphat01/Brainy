@@ -47,18 +47,5 @@ const words = [
   ];
 
 export async function GET(request) {
-  // ... existing code ...
-  
-  // Remove length filtering
-  // const length = searchParams.get('length');
-  
-  // let filteredWords = words;
-  // if (length) {
-  //   filteredWords = words.filter(word => word.length === parseInt(length));
-  // }
-
-  // Use the full word list directly
-  const randomWord = words[Math.floor(Math.random() * words.length)];
-  
-  return NextResponse.json({ word: randomWord });
+  return NextResponse.json({ words }); // Return the full list of words
 }
