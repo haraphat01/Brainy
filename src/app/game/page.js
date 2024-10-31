@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTelegram } from '../TelegramProvider';
 import { useSpring, animated, config } from 'react-spring';
 
+
 const GAME_DURATION = 30; // 30 seconds per word
 const COOLDOWN_PERIOD = 0.001 * 60 * 60 * 1000; // 3 hours in milliseconds
 
@@ -132,6 +133,25 @@ export default function ScrabbleGame() {
     }
   }, [canPlay, gameOver, fetchNewWord]);
 
+  const sendScoreToAPI = useCallback(async () => {
+    if (score > 0) {
+      try {
+        const res = await fetch('/api/addGamePoints', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramId: user.id, points: score }),
+        });
+        const updatedUser = await res.json();
+        console.log('Score sent to API:', updatedUser);
+      } catch (error) {
+        console.error('Error sending score to API:', error);
+      }
+    }
+
+    localStorage.setItem(`lastPlayTime_${user.id}`, Date.now().toString());
+    checkCooldown();
+  }, [score, user.id, checkCooldown]);
+
   useEffect(() => {
     if (timeLeft > 0 && !gameOver) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -140,7 +160,7 @@ export default function ScrabbleGame() {
       setGameOver(true);
       sendScoreToAPI();
     }
-  }, [timeLeft, gameOver]);
+  }, [timeLeft, gameOver, sendScoreToAPI]);
 
   useEffect(() => {
     if (cooldownTime > 0) {
@@ -182,25 +202,6 @@ export default function ScrabbleGame() {
         setRoast('');
       }, 3000);
     }
-  };
-
-  const sendScoreToAPI = async () => {
-    if (score > 0) {
-      try {
-        const res = await fetch('/api/addGamePoints', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ telegramId: user.id, points: score }),
-        });
-        const updatedUser = await res.json();
-        console.log('Score sent to API:', updatedUser);
-      } catch (error) {
-        console.error('Error sending score to API:', error);
-      }
-    }
-
-    localStorage.setItem(`lastPlayTime_${user.id}`, Date.now().toString());
-    checkCooldown();
   };
 
   const formatTime = (ms) => {
@@ -248,9 +249,10 @@ export default function ScrabbleGame() {
     <div className="flex items-center justify-center min-h-screen bg-white text-black relative overflow-hidden">
       <div className="absolute w-64 h-64 bg-black opacity-10 rounded-full top-10 left-10 animate-pulse"></div>
       <div className="absolute w-48 h-48 bg-black opacity-10 rounded-full bottom-10 right-10 animate-pulse"></div>
-
+      {/* Cartoon Image Section */}
+     
       <div className="w-full max-w-md p-4 text-center bg-white shadow-xl rounded-lg z-10 relative">
-        <h2 className="text-3xl font-bold mb-6">🧩 Unscramble the Word! 🧩</h2>
+        <h2 className="text-3xl font-bold mb-6">🧩 Unscramble the Word!</h2>
         <p className="text-xl font-semibold mb-4">Guess the country or crypto term</p>
         {!canPlay ? (
           <div className="text-lg text-red-500">
@@ -316,3 +318,4 @@ export default function ScrabbleGame() {
     </div>
   );
 }
+

@@ -62,3 +62,18 @@ body {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.cartoon-image {
+  max-width: 100%; /* Make it responsive */
+  height: auto; /* Maintain aspect ratio */
+  animation: bounce 2s infinite; /* Add a bouncing animation */
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px); /* Bounce up */
+  }
+}

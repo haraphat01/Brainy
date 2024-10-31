@@ -1,6 +1,5 @@
 'use client';
-
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 // Create the Telegram context
 const TelegramContext = createContext({});
@@ -14,6 +13,7 @@ export default function TelegramProvider({ children }) {
   const [webApp, setWebApp] = useState(null);
   const [startParam, setStartParam] = useState(null); // State to capture referral start parameter
 
+  // Initialize Telegram WebApp and fetch user/startParam data
   useEffect(() => {
     const initTelegram = async () => {
       if (typeof window !== 'undefined') {
@@ -31,9 +31,9 @@ export default function TelegramProvider({ children }) {
           WebApp.ready();
 
           const initDataUnsafe = WebApp.initDataUnsafe || {};
+
           if (initDataUnsafe.user) {
             const { id, first_name, last_name, username } = initDataUnsafe.user;
-
             // Set user data
             setUser({
               id,
@@ -43,7 +43,7 @@ export default function TelegramProvider({ children }) {
             });
 
             // Optionally, send user data to your API
-            await fetch('/api/user', {
+            const userResponse = await fetch('/api/user', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -53,6 +53,10 @@ export default function TelegramProvider({ children }) {
                 username,
               }),
             });
+
+            if (!userResponse.ok) {
+              console.error('Failed to send user data');
+            }
           }
 
           setWebApp(WebApp); // Set the WebApp instance
@@ -62,6 +66,7 @@ export default function TelegramProvider({ children }) {
           if (startParameter) {
             setStartParam(startParameter); // Store start param if exists
           }
+
         } catch (error) {
           console.error('Error initializing Telegram WebApp:', error);
         }
@@ -71,14 +76,12 @@ export default function TelegramProvider({ children }) {
     initTelegram();
   }, []);
 
-  useEffect(() => {
-    if (user?.id && startParam) {
-      handleReferral(user.id, startParam); // Process referral if both user and start param are available
-    }
-  }, [user, startParam]);
+  // Watch for changes in user and startParam, call handleReferral when both are set
+ 
 
   // Function to handle referral processing
-  const handleReferral = async (referredId, referrerId) => {
+  const handleReferral = useCallback(async (referredId, referrerId) => {
+    console.log('handleReferral called with:', { referredId, referrerId });
     try {
       const response = await fetch('/api/referral', {
         method: 'POST',
@@ -88,25 +91,42 @@ export default function TelegramProvider({ children }) {
         body: JSON.stringify({ referredId, referrerId }),
       });
 
+      const data = await response.json();
+      console.log('Referral response:', data);
+
       if (!response.ok) {
-        throw new Error('Failed to process referral');
+        throw new Error(data.error || 'Failed to process referral');
       }
 
-      // Optionally, show a success popup in the Telegram WebApp
-      webApp?.showPopup({ message: 'Welcome! You\'ve been successfully referred.' });
+      webApp?.showPopup({ 
+        message: "Welcome! You've been successfully referred.",
+        buttons: [{ type: "ok" }]
+      });
     } catch (error) {
       console.error('Error processing referral:', error);
-      // Show an error popup in case of failure
-      webApp?.showPopup({ message: 'There was an error processing your referral.' });
+      webApp?.showPopup({ 
+        message: 'There was an error processing your referral: ' + error.message,
+        buttons: [{ type: "ok" }]
+      });
     }
-  };
-
+  }, [webApp]);
+  useEffect(() => {
+    if (user?.id && startParam) {
+      console.log('Calling handleReferral with user ID and startParam:', user.id, startParam);
+      handleReferral(user.id, startParam);
+    } else {
+      console.log('handleReferral not called: User or startParam not available', { user, startParam });
+    }
+  }, [user, startParam, handleReferral]);
   // Memoize the context value for performance
-  const value = useMemo(() => ({
-    webApp,
-    user,
-    startParam,
-  }), [webApp, user, startParam]);
+  const value = useMemo(
+    () => ({
+      webApp,
+      user,
+      startParam,
+    }),
+    [webApp, user, startParam]
+  );
 
   if (!webApp) {
     return <div>Loading...</div>; // Consider adding a better loading component

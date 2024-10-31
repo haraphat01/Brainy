@@ -6,7 +6,7 @@ export default function WalletPage() {
             <h2 className="text-3xl font-bold mb-4">Wallet (Coming Soon)</h2>
             <p className="mb-4 text-center">Get ready to take your crypto experience to the next level!</p>
             <p className="mb-4 text-center">Our wallet feature will soon be available, allowing you to send and receive cryptocurrencies from any Telegram user seamlessly.</p>
-            <p className="mb-4 text-center">Not only that, you'll also be able to send crypto externally to any wallet address, giving you the freedom to manage your digital assets like never before.</p>
+            <p className="mb-4 text-center">Not only that, you&apos;ll also be able to send crypto externally to any wallet address, giving you the freedom to manage your digital assets like never before.</p>
             <p className="mb-4 text-center">Stay tuned for updates, and get ready to unlock the full potential of your crypto wallet!</p>
         </div>
     );
